@@ -1,4 +1,4 @@
-TITLE by YOUR_NAME_HERE
+paipai 探索性分析
 ========================================================
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
@@ -14,6 +14,12 @@ library(ggplot2)
 
 ```{r echo=FALSE, Load_the_Data}
 # 加载数据
+setwd("/Users/Mac/Udacity/P3")
+getwd()
+LC <- read.csv("LC.csv")
+LP <- read.csv("LP.csv")
+LCIS <- read.csv("LCIS.csv")
+
 
 ```
 
@@ -24,15 +30,92 @@ library(ggplot2)
 
 # 单变量分析
 
-### 你的数据集结构是什么？
+### 1. 你的数据集结构是什么？
+str(LC)
+一般的借款期限是什么分布状况？
 
-### 你的数据集内感兴趣的主要特性有哪些？
+说明主要分布在
+### 2. 你的数据集内感兴趣的主要特性有哪些？
 
-### 你认为数据集内哪些其他特征可以帮助你探索兴趣特点？
+#### 2.1 对LC数据集的观察和分析
+##### 2.1.1 借款人中，男性多还是女性多？
 
-### 根据数据集内已有变量，你是否创建了任何新变量？
+```{r}
+# table(LC$性别)
+ggplot(aes(x = 性别), data = LC) +
+    geom_bar() +
+    theme(text = element_text(family = "STHeiti"))
+```
+由此可见，男性比例更高。
 
-### 在已经探究的特性中，是否存在任何异常分布？你是否对数据进行一些操作，如清洁、调整或改变数据的形式？如果是，你为什么会这样做？
+##### 2.1.2 借款的男性和女性，更偏向于选择怎样的借款期限
+
+```{r}
+
+summary(LC$借款期限)
+
+ggplot(aes(x = 借款期限), data = LC) +
+    geom_histogram(binwidth = 1) +
+    scale_x_continuous(limits = c(1, 24)) +
+    facet_wrap(~性别) +
+    theme(text = element_text(family = "STHeiti"))
+
+```
+由此可见，男性和女性在选择借款期限上都较为一致，一般选择6期或者12期。
+
+#### 2.2 对LP数据集的观察和分析
+贷款的还款状态分布是怎么样的？
+```{r}
+ggplot(aes(x = 还款状态), data = LP) +
+    geom_histogram(binwidth = 0.5) +
+    theme(text = element_text(family = "STHeiti"))
+```
+由此可见，由此可见，大部分是未还款或“已正常还款”，有一定量的“已逾期还款”，“已提前还清该标全部欠款’”和“已部分还款”比较少。
+
+#### 2.3 对LCIS数据集的观察和分析
+大部分借款人的初始评级分布是怎样的？
+```{r}
+ggplot(aes(x = 初始评级), data = LCIS) +
+    geom_bar(aes(color = 性别)) +
+    theme(text = element_text(family = "STHeiti"))
+```
+结论：大部分借款人的初始评级为B或者C。男性的C类较多，女性的B类较多。
+
+### 3. 你认为数据集内哪些其他特征可以帮助你探索兴趣特点？
+3.1 LC数据集 - 年龄分布
+3.2 总利息（应还利息和剩余利息之和）的分布情况
+3.3 LCIS中 （1）历史成功借款次数和身份认证指数的关系（2）借款类型的分布
+### 4. 根据数据集内已有变量，你是否创建了任何新变量？
+#### 4.1 身份认证指数
+不同认证，赋予不同的权重，设计一个身份认证指数来综合各种认证方式的效果。
+本文提出这种思路，并给出示例，更为权重可以根据相关资料进行深入探索。
+当所有方式均成功认证，则为满分为1分。
+```{r}
+# 创建身份认证指数
+LC$身份认证指数 <- NA
+LC$手机认证指数 <- as.numeric(as.character(ifelse(LC$手机认证 == "成功认证", 1, 0)))
+LC$户口认证指数 <- as.numeric(as.character(ifelse(LC$户口认证 == "成功认证", 1, 0)))
+LC$视频认证指数 <- as.numeric(as.character(ifelse(LC$视频认证 == "成功认证", 1, 0)))
+LC$学历认证指数 <- as.numeric(as.character(ifelse(LC$学历认证 == "成功认证", 1, 0)))
+LC$征信认证指数 <- as.numeric(as.character(ifelse(LC$征信认证 == "成功认证", 1, 0)))
+LC$淘宝认证指数 <- as.numeric(as.character(ifelse(LC$淘宝认证 == "成功认证", 1, 0)))
+# 赋予各种认证方式不同的权重
+LC$身份认证指数 <- (1.0 * LC$手机认证指数 + 2.0 * LC$户口认证指数 + 1.0 * LC$视频认证指数 + 2.0 * LC$学历认证指数 + 3.0 * LC$征信认证指数 + 1.0 * LC$淘宝认证指数)/(1+2+1+2+3+1)
+
+# 绘制身份认证指数分布柱状图
+ggplot(aes(x = LC$身份认证指数), data = LC) +
+    geom_bar(aes(color = 性别)) +
+    theme(text = element_text(family = "STHeiti"))
+
+# 查看身份认证指数的描述性统计值
+summary(LC$身份认证指数)
+
+```
+
+结论：平均值分布为0.13分，中位数为0.1分。结论：由此发现，大量的借款人并没有进行身份认证。应当采用用户运营手段来促使借款人认证，获取足够数据源便于分析。
+
+
+### 5. 在已经探究的特性中，是否存在任何异常分布？你是否对数据进行一些操作，如清洁、调整或改变数据的形式？如果是，你为什么会这样做？
 
 
 
@@ -44,12 +127,50 @@ library(ggplot2)
 # 双变量分析
 
 ### 探讨你在这部分探究中观察到的一些关系。这些感兴趣的特性与数据集内其他特性有什么区别？
+LC数据集中，
+每笔loan中的借款金额和各变量之间的关系，现在挑选了年龄、身份认证指数、
+1. 与年龄的关系
+```{r}
+# 借款金额用 以10为底的对数 来处理
+ggplot(aes(x = LC$年龄, y = LC$借款金额), data = LC) +
+    geom_point(alpha = 1/500, position = position_jitter(h = 0), color = 'orange') +
+    coord_trans(y = "log10") +
+    geom_line(stat = 'summary',fun.y = mean, linetype = 2, color = 'blue') +
+    ylab("log10Y") +
+    theme(text = element_text(family = "STHeiti"))
+
+```
+
+2. 与身份认证指数之间的关系
+
+```{r}
+# 借款金额用 以10为底的对数 来处理
+
+```
+
+
+3. 与历史成功单次借款金额的关系
+
+定义了 历史成功单次借款金额(Historical successful single loan amount)简写为 hs1LA
+
+```{r}
+# 定义hs1LA
+LC$hs1LA <- ifelse(LC$历史成功借款次数 > 0, LC$历史成功借款金额 / LC$历史成功借款次数, 0)
+
+# hs1LA与借款金额的关系，其中借款金额依旧用 以10为底的对数 来处理
+ggplot(aes(x = LC$hs1LA, y = LC$借款金额), data = LC) +
+    geom_point(alpha = 1/150, position = position_jitter(h = 0), color = 'orange') +
+    coord_trans(y = "log10") +
+    xlim(1,15000) +
+    xlab("hs1LA") +
+    ylab("log10Y") +
+    theme(text = element_text(family = "STHeiti")) +
+    geom_smooth(method = 'lm', color = 'red')
+```
 
 ### 你是否观察到主要特性与其他特性之间的有趣关系？
 
 ### 你发现最强的关系是什么？
-
-
 
 
 # 多变量绘图选择
