@@ -179,11 +179,47 @@ ggplot(aes(x = LC$hs1LA, y = LC$借款金额), data = LC) +
 
 ```
 不同的借款类型，其逾期率是否有不同？
-LCIS_APP闪电 <- subset(LCIS, 借款类型 == "APP闪电")
-LCIS_其他 <- subset(LCIS, 借款类型 == "其他")
-LCIS_应收安全标 <- subset(LCIS, 借款类型 == "应收安全标")
-LCIS_普通 <- subset(LCIS, 借款类型 == "普通")
-LCIS_电商 <- subset(LCIS, 借款类型 == "电商")
+
+```{r}
+LCIS_APP闪电 <- subset(LCIS_clean, 借款类型 == "APP闪电")
+LCIS_其他 <- subset(LCIS_clean, 借款类型 == "其他")
+LCIS_应收安全标 <- subset(LCIS_clean, 借款类型 == "应收安全标")
+LCIS_普通 <- subset(LCIS_clean, 借款类型 == "普通")
+LCIS_电商 <- subset(LCIS_clean, 借款类型 == "电商")
+```
+
+在分析逾期率之前，发现“标当前状态”一列中有不整洁数据存在，一些数字而不是表示当期状态的字符串（如‘正常还款中’，‘逾期中’，‘已还清’，‘已债转’）。利用filter()将这些不整洁数据剔除。
+```{r}
+LCIS_clean <- filter(LCIS, 标当前状态 == "正常还款中" | 标当前状态 == "逾期中" | 标当前状态 == "已还清" | 标当前状态 == "已债转")
+```
+
+则不同电商平台下的逾期率
+```{r}
+as.data.frame(table(LCIS_APP闪电$标当前状态))
+as.data.frame(table(LCIS_其他$标当前状态))
+as.data.frame(table(LCIS_应收安全标$标当前状态))
+as.data.frame(table(LCIS_普通$标当前状态))
+as.data.frame(table(LCIS_电商$标当前状态))
+```
+
+图的绘制：
+1. 随着年龄的增加，不同借款类型情况下，借款金额的变化
+
+
+2. 随着年龄的增加，不同认证指数范围情况(采用cut函数 7-10课程)下，借款金额的变化
+
+
+3. 热图(7-25课程)
+降低运算量，只挑选部分数据
+```{r}
+library(GGally)
+set.seed(1234)
+!!! LCIS_clean_subset <- LCIS_clean[, c()]  ##此行需要完善，挑选 生成热图的列
+ggpairs(LCIS_clean_subset[sample(nrow(LCIS_clean_subset),1000),])
+
+```
+
+
 # 多变量分析
 
 ###  探讨你在这部分探究中观察到的一些关系。通过观察感兴趣的特性，是否存在相互促进的特性？
