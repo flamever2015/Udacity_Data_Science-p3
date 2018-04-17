@@ -178,7 +178,12 @@ ggplot(aes(x = LC$hs1LA, y = LC$借款金额), data = LC) +
 ```{r echo=FALSE, Multivariate_Plots}
 
 ```
-
+不同的借款类型，其逾期率是否有不同？
+LCIS_APP闪电 <- subset(LCIS, 借款类型 == "APP闪电")
+LCIS_其他 <- subset(LCIS, 借款类型 == "其他")
+LCIS_应收安全标 <- subset(LCIS, 借款类型 == "应收安全标")
+LCIS_普通 <- subset(LCIS, 借款类型 == "普通")
+LCIS_电商 <- subset(LCIS, 借款类型 == "电商")
 # 多变量分析
 
 ###  探讨你在这部分探究中观察到的一些关系。通过观察感兴趣的特性，是否存在相互促进的特性？
