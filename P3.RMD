@@ -1,4 +1,4 @@
-paipai 探索性分析
+拍拍贷数据 探索性分析
 ========================================================
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
@@ -10,6 +10,10 @@ paipai 探索性分析
 # 应当在文件中，对所有代码块设为 echo=FALSE 。
 
 library(ggplot2)
+library(dplyr)
+library(reshape2)
+
+
 ```
 
 ```{r echo=FALSE, Load_the_Data}
@@ -40,7 +44,7 @@ str(LC)
 #### 2.1 对LC数据集的观察和分析
 ##### 2.1.1 借款人中，男性多还是女性多？
 
-```{r}
+```{r echo=FALSE}
 # table(LC$性别)
 ggplot(aes(x = 性别), data = LC) +
     geom_bar() +
@@ -50,7 +54,7 @@ ggplot(aes(x = 性别), data = LC) +
 
 ##### 2.1.2 借款的男性和女性，更偏向于选择怎样的借款期限
 
-```{r}
+```{r echo=FALSE}
 
 summary(LC$借款期限)
 
@@ -65,7 +69,7 @@ ggplot(aes(x = 借款期限), data = LC) +
 
 #### 2.2 对LP数据集的观察和分析
 贷款的还款状态分布是怎么样的？
-```{r}
+```{r echo=FALSE}
 ggplot(aes(x = 还款状态), data = LP) +
     geom_histogram(binwidth = 0.5) +
     theme(text = element_text(family = "STHeiti"))
@@ -74,7 +78,7 @@ ggplot(aes(x = 还款状态), data = LP) +
 
 #### 2.3 对LCIS数据集的观察和分析
 大部分借款人的初始评级分布是怎样的？
-```{r}
+```{r echo=FALSE}
 ggplot(aes(x = 初始评级), data = LCIS) +
     geom_bar(aes(color = 性别)) +
     theme(text = element_text(family = "STHeiti"))
@@ -90,7 +94,7 @@ ggplot(aes(x = 初始评级), data = LCIS) +
 不同认证，赋予不同的权重，设计一个身份认证指数来综合各种认证方式的效果。
 本文提出这种思路，并给出示例，更为权重可以根据相关资料进行深入探索。
 当所有方式均成功认证，则为满分为1分。
-```{r}
+```{r echo=FALSE}
 # 创建身份认证指数
 LC$身份认证指数 <- NA
 LC$手机认证指数 <- as.numeric(as.character(ifelse(LC$手机认证 == "成功认证", 1, 0)))
@@ -127,16 +131,17 @@ summary(LC$身份认证指数)
 # 双变量分析
 
 ### 探讨你在这部分探究中观察到的一些关系。这些感兴趣的特性与数据集内其他特性有什么区别？
-LC数据集中，
-每笔loan中的借款金额和各变量之间的关系，现在挑选了年龄、身份认证指数、
-1. 与年龄的关系
-```{r}
+针对LC数据集，探索每笔loan中的借款金额和各变量之间的关系，现在挑选了年龄、身份认证指数、
+1. 借款金额与年龄的关系
+
+```{r echo=FALSE}
 # 借款金额用 以10为底的对数 来处理
 ggplot(aes(x = LC$年龄, y = LC$借款金额), data = LC) +
     geom_point(alpha = 1/500, position = position_jitter(h = 0), color = 'orange') +
     coord_trans(y = "log10") +
     geom_line(stat = 'summary',fun.y = mean, linetype = 2, color = 'blue') +
-    ylab("log10Y") +
+    xlab("年龄") +  
+    ylab("借款金额") +
     theme(text = element_text(family = "STHeiti"))
 
 ```
@@ -162,10 +167,11 @@ ggplot(aes(x = LC$hs1LA, y = LC$借款金额), data = LC) +
     geom_point(alpha = 1/150, position = position_jitter(h = 0), color = 'orange') +
     coord_trans(y = "log10") +
     xlim(1,15000) +
-    xlab("hs1LA") +
-    ylab("log10Y") +
+    xlab("历史成功单次借款金额") +
+    ylab("借款金额") +
     theme(text = element_text(family = "STHeiti")) +
     geom_smooth(method = 'lm', color = 'red')
+
 ```
 
 ### 你是否观察到主要特性与其他特性之间的有趣关系？
@@ -234,26 +240,117 @@ ggpairs(LCIS_clean_subset[sample(nrow(LCIS_clean_subset),1000),])
 
 ### 绘图一
 ```{r echo=FALSE, Plot_One}
+# 年龄分块
+# 按照以下年龄段分段
+# 15-25
+# 25-35
+# 35-60 
+
+LC$age_bucket <- cut(LC$年龄, c(15, 25, 35, 60))
+### LC_age_clean <- subset(LC, !is.na(年龄))
+# 借款金额用 以10为底的对数 来处理
+ggplot(aes(x = LC$年龄, y = LC$借款金额), data = LC) +
+    geom_line(aes(color = LC$age_bucket),
+              stat = 'summary',
+              fun.y = median) +
+    coord_trans(y = "log10") +
+    xlab("年龄") +
+    ylab("借款金额") +
+    labs(title = "不同年龄段借款金额的变化") +
+    theme(text = element_text(family = "STHeiti"))
 
 ```
 
 ### 描述一
+不同年龄段与其借款金额的变化关系,年龄越大，即可额度越多。
 
 
 ### 绘图二
-```{r echo=FALSE, Plot_Two}
+```{r echo=FALSE, Plot_Two_1}
+
+# 按照性别和年龄划分形成新数据集
+LCIS_loan_by_age_gender <- LCIS %>%
+    filter(!is.na(年龄) & !is.na(性别)) %>%
+    group_by(年龄, 性别) %>%
+    summarise(mean_loan_now = mean(借款金额),
+              median_loan_now = median(借款金额),
+              n = n()) %>%
+    ungroup() %>%
+    arrange(年龄)
+
+# 据此绘图分析
+### x1 <-  dplyr::distinct(LCIS)
+
+ggplot(aes(x = 年龄, y = mean_loan_now),
+       data = LCIS_loan_by_age_gender) +
+    geom_line(aes(color = 性别)) +
+    xlim(17, 56) +
+    ylim(0,20000) +
+    xlab("年龄") +
+    ylab("借款金额平均值") +
+    theme(text = element_text(family = "STHeiti"))
 
 ```
 
+男性和女性用户借款金额的比例关系代码如下
+
+```{r echo=FALSE, Plot_Two_1}
+
+# 借款金额比值的探索
+LCIS_loan_by_age_gender_wide <- dcast(LCIS_loan_by_age_gender,
+    年龄 ~ 性别,
+    value.var = "mean_loan_now")
+
+# 比值的绘图
+ggplot(aes(x = 年龄, y = 男/女),
+       data = LCIS_loan_by_age_gender_wide) +
+    geom_line() +
+    geom_hline(yintercept = 1, alpha = 0.3, linetype = 2)
+
+```
+
+
 ### 描述二
+随着年龄变化，男性和女性的借款金额会有怎样的变化？
+- 剔除了只有女性有的年龄段（60和65岁）数据
+可得到如下结论：
+1. 在15-50之间，男性要比女性用户的借款金额均值更多。
+2. 男性一般为女性用户的1.5倍之间。
 
 
 ### 绘图三
+
 ```{r echo=FALSE, Plot_Three}
+
+# 定义hs1LA - 已定义
+
+# 分组
+
+LC_loan_by_Age_Gender_Rate <- LC %>%
+    filter(!is.na(年龄) & !is.na(初始评级)) %>%
+    group_by(年龄, 性别, 初始评级) %>%
+    summarise(mean_hs1LA_history = mean(hs1LA),
+              median_hs1LA_history = median(hs1LA),
+              n = n()) %>%
+    ungroup() %>%
+    arrange(年龄)
+
+# 绘图
+ggplot(aes(x = round(年龄/5) * 5, y = mean_hs1LA_history),
+       data = LC_loan_by_Age_Gender_Rate) +
+    geom_point(aes(color = 初始评级)) +
+    xlim(15, 60) +
+    ylim(0,20000) +
+    xlab("年龄") +
+    ylab("历史成功单次借款金额") +
+    facet_wrap(~ 性别) +
+    theme(text = element_text(family = "STHeiti"))
+
 
 ```
 
 ### 描述三
+不同初始等级情况下，历史成功单次借款金额随着年龄有怎样的变化？
 
 ------
 
