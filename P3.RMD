@@ -18,6 +18,8 @@ library(psych)
 library(corrplot)
 library(MASS)
 library(splines)
+library(RColorBrewer)
+library(ggthemes)
 
 ```
 
@@ -44,6 +46,7 @@ LCIS <- read.csv("LCIS.csv", fileEncoding='utf-8')
 # 绘图
 ggplot(aes(x = 借款金额), data = LC) +
     geom_histogram(binwidth = 10000) +
+    scale_colour_economist() +  
     theme(text = element_text(family = "STHeiti"))
 
 # 统计量
@@ -124,6 +127,7 @@ ggplot(aes(x = 还款状态), data = LP) +
 ```{r echo=FALSE}
 ggplot(aes(x = 初始评级), data = LCIS) +
     geom_bar(aes(color = 性别)) +
+    scale_colour_wsj() +  
     theme(text = element_text(family = "STHeiti"))
 ```
 
@@ -332,8 +336,9 @@ ggplot(aes(x = LCIS_subset$初始评级, y = LCIS_subset$借款金额), data = L
 summary(LCIS$借款类型)
 ```
 
-箱形图 展示
+箱形图 展示 _ p3（3-2627）_
 ```{r echo=FALSE}
+
 ggplot(aes(x = LCIS_subset$借款类型, y = LCIS_subset$借款金额), data = LCIS_subset) +
     geom_boxplot() +
     xlab("借款类型") +  
@@ -345,6 +350,7 @@ ggplot(aes(x = LCIS_subset$借款类型, y = LCIS_subset$借款金额), data = L
 
 
 # 双变量分析
+
 ### 探讨你在这部分探究中观察到的一些关系。这些感兴趣的特性与数据集内其他特性有什么区别？
 
 ### 你是否观察到主要特性与其他特性之间的有趣关系？
@@ -397,7 +403,23 @@ as.data.frame(table(LCIS_电商$标当前状态))
 
 ### 探讨你在这部分探究中观察到的一些关系。通过观察感兴趣的特性，是否存在相互促进的特性？
 
-### 这些特性之间是否存在有趣或惊人的联系呢？
+### 待补充结论 - 这些特性之间是否存在有趣或惊人的联系呢？
+可以探索身份认证内部的关联
+```{r}
+# 各种身份认证的子集
+LCIS_Cert <- LCIS[, c("手机认证指数", "户口认证指数", "视频认证指数", "学历认证指数", "征信认证指数", "淘宝认证指数")]
+
+# 绘制相关性系数矩阵
+corrplot(cor(LCIS_Cert), method = 'number', number.digits = 1, number.cex = 1, addCoefasPercent = TRUE, family = 'STHeiti') 
+
+```
+
+##### 待补充 - 各种认证方式和借款金额的关系图
+
+
+结论如下：
+- 户口认证
+
 
 ### 选项：你是否创建过数据集的任何模型？讨论你模型的优缺点。
 
@@ -417,11 +439,13 @@ as.data.frame(table(LCIS_电商$标当前状态))
 LC$age_bucket <- cut(LC$年龄, c(15, 25, 35, 60))
 ### LC_age_clean <- subset(LC, !is.na(年龄))
 # 借款金额用 以10为底的对数 来处理
+## 选用了经济学人主题
 ggplot(aes(x = LC$年龄, y = LC$借款金额), data = LC) +
     geom_line(aes(color = LC$age_bucket),
               stat = 'summary',
               fun.y = median) +
     coord_trans(y = "log10") +
+    scale_colour_economist() +
     xlab("年龄") +
     ylab("借款金额") +
     labs(title = "不同年龄段借款金额的变化") +
@@ -449,10 +473,11 @@ LCIS_loan_by_age_gender <- LCIS %>%
 
 # 据此绘图分析
 ### x1 <-  dplyr::distinct(LCIS)
-
+## 选用了华尔街日报主题
 ggplot(aes(x = 年龄, y = mean_loan_now),
        data = LCIS_loan_by_age_gender) +
     geom_line(aes(color = 性别)) +
+    scale_colour_wsj() +
     xlim(17, 56) +
     ylim(0,20000) +
     xlab("年龄") +
@@ -474,7 +499,11 @@ LCIS_loan_by_age_gender_wide <- dcast(LCIS_loan_by_age_gender,
 ggplot(aes(x = 年龄, y = 男/女),
        data = LCIS_loan_by_age_gender_wide) +
     geom_line() +
-    geom_hline(yintercept = 1, alpha = 0.3, linetype = 2)
+    scale_colour_wsj() +
+    geom_hline(yintercept = 1, alpha = 0.3, linetype = 2) +
+    xlab("年龄") +
+    ylab("(男/女)借款金额比") +
+    theme(text = element_text(family = "STHeiti"))
 
 ```
 
@@ -508,9 +537,11 @@ LC_loan_by_Age_Gender_Rate <- LC %>%
     arrange(年龄)
 
 # 绘图
+## 采用经济学人主题
 ggplot(aes(x = round(年龄/5) * 5, y = mean_hs1LA_history),
        data = LC_loan_by_Age_Gender_Rate) +
     geom_point(aes(color = 初始评级)) +
+    scale_colour_economist() +
     xlim(15, 60) +
     ylim(0,20000) +
     xlab("年龄") +
