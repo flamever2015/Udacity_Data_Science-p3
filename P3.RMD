@@ -27,7 +27,7 @@ library(ggthemes)
 # 加载数据
 
 setwd("/Users/Mac/Udacity/P3")
-getwd()
+#getwd()
 
 LC <- read.csv("LC.csv", fileEncoding='utf-8')
 LP <- read.csv("LP.csv", fileEncoding='utf-8')
@@ -36,6 +36,28 @@ LCIS <- read.csv("LCIS.csv", fileEncoding='utf-8')
 ```
 
 基于拍拍贷真实业务数据样本，本文探索了P2P交易中有趣的交易现象。
+# 数据集预处理
+观察三个数据集存在质量和整洁度方面的问题。
+
+```{r echo=FALSE}
+str(LC)
+summary(LC)
+
+str(LP)
+summary(LP)
+
+str(LCIS)
+summary(LCIS)
+```
+
+- 最大的成功还款期数为2507，因为还款一般为每隔一个月还款一次，而成功还款2507相当于成功还款208年，这显然是错误数据。通过拍拍贷网站介绍(https://www.ppdai.com/help/aboutus)，查询到其业务开展于2007年6月，所以可确定最大的成功还款期数在10年，即120次。据此剔除错误数据。
+
+```{r}
+# 去除无效 - 还款期数大于120
+LC_clean <- subset(LC, LC$历史正常还款期数 <= 120)
+summary(LC_clean)
+```
+
 
 # 单变量绘图
 
@@ -140,6 +162,7 @@ ggplot(aes(x = 初始评级), data = LCIS) +
 拍拍贷数据分析项目一共提供了3个数据集。包含了成交时间从2015年1月1日到2017年1月30日的328553支信用标。
 
 - LC表：标的特征表，每支标一条记录。共有21个字段，包括一个主键（listingid）、7个标的特征和13个成交当时的借款人信息，全部为成交当时可以获得的信息。
+
 ```{r echo=FALSE}
 str(LC)
 ```
@@ -400,6 +423,9 @@ as.data.frame(table(LCIS_电商$标当前状态))
 
 
 # 多变量分析
+
+添加散点图（颜色分类，随着某个变量的变化，借款金额如何变化）
+
 
 ### 探讨你在这部分探究中观察到的一些关系。通过观察感兴趣的特性，是否存在相互促进的特性？
 
