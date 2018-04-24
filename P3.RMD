@@ -487,6 +487,7 @@ summary(LC_clean$年龄)
 ```
 
 ```{r echo=FALSE, Multivariate_Plots}
+
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
     geom_point() +
     scale_colour_wsj() +
@@ -670,86 +671,57 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
 
 ```
 
-#### 待补充结论 - 7. 箱形图
-
-x 初始等级
-y 借款金额/借款期限
-
-绘图 + summary()
-
+#### 7. 借款行为冲动还是保守？
+可能某一位借款人会借一大笔钱，但是相比历史成功单次借款金额并不大，比如两者比值小于1，说明这位借款人在这笔交易中并没有突破之前的借款金额均值，属于保守的借款行为。我创建了一个新指标 借款行为指数，来描述这种是否突破历史借款行为的情况。
+需要说明的是，如果某笔交易的历史成功单次借款金额hs1LA为 0 的话，作为分母的除法运算就无法进行，则统一设定这类情况的hs1LA值为1。
 
 ```{r echo=FALSE}
-# 创建变量 更新单次借款金额
-LC_clean$更新单次借款金额 <- NA
-LC_clean$更新单次借款金额 <- (LC_clean$借款金额 + LC_clean$历史成功借款金额)/(LC_clean$历史成功借款次数 + 1)
+# 创建变量 借款行为指数
+LC_clean$借款行为指数 <- NA
+LC_clean$temp_hs1LA <- NA
+LC_clean$temp_hs1LA <- as.numeric(ifelse(LC_clean$hs1LA == 0, 1, LC_clean$hs1LA))
+LC_clean$借款行为指数 <- LC_clean$借款金额/LC_clean$temp_hs1LA
+summary(LC_clean$借款行为指数)
+range(LC_clean$借款金额)
+range(LC_clean$hs1LA)
 
 # 借款类型箱形图    
-ggplot(aes(x = LC_clean$借款类型, y = LC_clean$更新单次借款金额), data = LC_clean) +
+ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款行为指数), data = LC_clean) +
     geom_boxplot() +
     xlab("借款类型") +  
-    ylab("更新单次借款金额") +
-    coord_cartesian(ylim = c(0, 200000)) +
+    ylab("借款行为指数") +
+    coord_cartesian(ylim = c(0, 8000)) +
     theme(text = element_text(family = "STHeiti"))
 # 统计量
-by(LC_clean$更新单次借款金额, LC_clean$借款类型, summary)
+by(LC_clean$借款行为指数, LC_clean$借款类型, summary)
 ```
 
 ```{r echo=FALSE}
 # 初始评级箱形图
-ggplot(aes(x = LC_clean$初始评级, y = LC_clean$更新单次借款金额), data = LC_clean) +
+ggplot(aes(x = LC_clean$初始评级, y = LC_clean$借款行为指数), data = LC_clean) +
     geom_boxplot() +
     xlab("初始评级") +  
-    ylab("单次还款金额") +
-    coord_cartesian(ylim = c(0, 15000)) +
+    ylab("借款行为指数") +
+    coord_cartesian(ylim = c(0, 8000)) +
     theme(text = element_text(family = "STHeiti"))
 
 # 统计量
-by(LC_clean$更新单次借款金额, LC_clean$初始评级, summary)
+by(LC_clean$借款行为指数, LC_clean$初始评级, summary)
 ```
 
-#### 0待整理&确定如何利用 - 逾期率
-
-在分析逾期率之前，发现“标当前状态”一列中有不整洁数据存在，一些数字而不是表示当期状态的字符串（如‘正常还款中’，‘逾期中’，‘已还清’，‘已债转’）。利用filter()将这些不整洁数据剔除。
-
-```{r echo=FALSE, Multivariate_Plots}
-LCIS_clean <- filter(LCIS_clean, 标当前状态 == "正常还款中" | 标当前状态 == "逾期中" | 标当前状态 == "已还清" | 标当前状态 == "已债转")
-```
-
-不同的借款类型，其逾期率是否有不同？
-
-```{r echo=FALSE}
-
-LCIS_APP闪电 <- subset(LCIS_clean, 借款类型 == "APP闪电")
-LCIS_其他 <- subset(LCIS_clean, 借款类型 == "其他")
-LCIS_应收安全标 <- subset(LCIS_clean, 借款类型 == "应收安全标")
-LCIS_普通 <- subset(LCIS_clean, 借款类型 == "普通")
-LCIS_电商 <- subset(LCIS_clean, 借款类型 == "电商")
-```
-
-则不同电商平台下的逾期率
-
-```{r echo=FALSE}
-as.data.frame(table(LCIS_APP闪电$标当前状态))
-as.data.frame(table(LCIS_其他$标当前状态))
-as.data.frame(table(LCIS_应收安全标$标当前状态))
-as.data.frame(table(LCIS_普通$标当前状态))
-as.data.frame(table(LCIS_电商$标当前状态))
-```
----
-
+由此可见，在进行一笔新交易时
+- 每一笔交易中的借款行为较之以往行为来说并不保守。中位数均大于1。
+- 由于有很多hs1LA被设定为1，所以计算出的借款行为指数很大，拉高了均值。
+- 从借款行为均值来看，来自电商平台的借款行为最为激进。其他平台最为保守。
+- 从初始评级均值来看，评级为B的借款行为最为激进，评级为C的最为保守。
 
 # 多变量分析
-
-添加散点图（颜色分类，随着某个变量的变化，借款金额如何变化）
-
 
 ### 探讨你在这部分探究中观察到的一些关系。通过观察感兴趣的特性，是否存在相互促进的特性？
 
 ### 这些特性之间是否存在有趣或惊人的联系呢？
 
-
 ##### 待补充 - 各种认证方式和借款金额的关系图
-
 
 ### 你是否创建过数据集的任何模型？讨论你模型的优缺点。
 
