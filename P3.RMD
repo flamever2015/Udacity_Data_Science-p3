@@ -21,6 +21,7 @@ library(splines)
 library(RColorBrewer)
 library(ggthemes)
 library(memisc)
+
 ```
 
 基于拍拍贷真实业务数据样本，本文探索了P2P交易中的交易现象，主要框架如下：
@@ -32,7 +33,7 @@ library(memisc)
 5. 定稿图和总结
 6. 反思
 
-# 一、数据集预处理
+# 数据集预处理
 
 在R中设置工作路径，并导入包含有数据集的csv文件。
 
@@ -84,11 +85,17 @@ LCIS_clean$初始评级 <- factor(LCIS_clean$初始评级, order = TRUE,
     level = c("AAA", "AA", "A", "B", "C", "D", "E", "F"))
 ```
 
+经过数据清理，最大的成功还款期数为
+
+```{r echo=FALSE}
+summary(LC_clean$历史正常还款期数)
+```
+
 # 单变量绘图
 
 #### 1. 对LC数据集的观察和分析
 
-##### 1.0 借款金额的分布
+##### 1.1 借款金额的分布
 
 ```{r echo=FALSE}
 # 绘图
@@ -96,7 +103,7 @@ LCIS_clean$初始评级 <- factor(LCIS_clean$初始评级, order = TRUE,
 ggplot(aes(x = LC_clean$借款金额), data = LC_clean) +
     geom_histogram(bins = 100) +
     annotate("rect",
-        xmin = 1000, xmax = 8000,
+        xmin = 1000, xmax = 10000,
         ymin = 0, ymax = Inf,
         alpha = .3, fill = "blue") +
     scale_x_log10() +
@@ -105,29 +112,35 @@ ggplot(aes(x = LC_clean$借款金额), data = LC_clean) +
     labs(title = "log10处理后的借款金额") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 
+```
+
+借款金额的统计量如下，
+
+```{r echo=FALSE}
 # 统计量
 summary(LC$借款金额)
 ```
 
+
 由此可见以下有趣的现象：
 
-- 大量交易的借款金额处在1000～8000这个范围内。
-- 大于50000的借款很少，在拍拍贷这个P2P平台中，大量交易还属于小额借款。所以重点关注金额在50000元以下的业务。
+- 大量交易的借款金额处在1000～10000这个范围内（蓝色区域为该范围）。
+- 大于50 000的借款很少，在拍拍贷这个P2P平台中，大量交易还属于小额借款。所以重点关注金额在50 000元以下的业务。
 
 ```{r echo=FALSE}
 
-p1 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 <50000)) +
+p1 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
     geom_histogram(bins = 100) +
     xlab("身份认证指数 - 无处理") +
     theme(text = element_text(family = "STHeiti"))
 
-p2 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 <50000)) +
+p2 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
     geom_histogram(bins = 100) +
     scale_x_log10() +
     xlab("身份认证指数 - log10处理") +
     theme(text = element_text(family = "STHeiti"))
 
-p3 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 <50000)) +
+p3 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
     geom_histogram(bins = 100) +
     scale_x_sqrt() +
     xlab("身份认证指数 - 开平方处理") +
@@ -138,9 +151,8 @@ grid.arrange(p1, p2, p3, ncol = 1)
 ```
 
 在对借款金额分布进行了对数和开方转化后，可以发现金额大部分集中1000～10000范围内。
-其他观察如下。
 
-##### 1.1 借款人中，男性多还是女性多？
+##### 1.2 借款人中，男性多还是女性多？
 
 ```{r echo=FALSE}
 # table(LC$性别)
@@ -151,11 +163,9 @@ ggplot(aes(x = 性别), data = LC_clean) +
 
 由此可见，男性比例更高。
 
-##### 1.2 借款的男性和女性，分别倾向于选择哪种借款期限？
+##### 1.3 借款的男性和女性，分别倾向于选择哪种借款期限？
 
 ```{r echo=FALSE}
-
-summary(LC_clean$借款期限)
 
 ggplot(aes(x = 借款期限), data = LC_clean) +
     geom_histogram(binwidth = 1) +
@@ -164,6 +174,13 @@ ggplot(aes(x = 借款期限), data = LC_clean) +
     theme(text = element_text(family = "STHeiti"))
 
 ```
+
+借款期限的统计量如下，
+
+```{r echo=FALSE}
+summary(LC_clean$借款期限)
+```
+
 
 由此可见，男性和女性在选择借款期限上都较为一致，一般选择6期或者12期。
 
@@ -192,6 +209,8 @@ ggplot(aes(x = 初始评级), data = LCIS_clean) +
 
 由此可见，大部分借款人的初始评级为B或者C。男性的C类较多，女性的B类较多。
 
+需要说明的是，本文之后的变量绘图和分析采用的数据均来自LC数据集。
+
 # 单变量分析
 
 ### 1. 你的数据集结构是什么？
@@ -218,21 +237,25 @@ str(LCIS)
 
 ### 2. 你的数据集内感兴趣的主要特性有哪些？
 
-结合这三个数据集，我主要关注借款金额这个变量。其他各变量的变化会如何影响借款金额。从而对借款人和投资人对行为提供参考：借款人如何改进自身的指标从而能够借到更多的钱，过去主要在哪些交易中进行了投资。
+结合这三个数据集，我深入挖掘LC数据集的信息，主要关注借款金额这个变量。其他各变量的变化会如何影响借款金额。从这个角度观察数据可以对借款人和投资人对行为提供参考：借款人如何改进自身的指标从而能够借到更多的钱，投资人面对的是怎样的借款交易市场。
 
 ### 3. 你认为数据集内哪些其他特征可以帮助你探索兴趣特点？
 
-初始评级、年龄、认证方式、借款利息、历史成功借款情况等因素，都可能会影响借款金额。并且这些因素对借款金额和投资行为都有很强烈的影响。
+初始评级、年龄、认证方式、历史成功借款情况等因素，都可能会影响借款金额。并且这些因素对借款金额和投资行为都有很强烈的影响。
 
 ### 4. 根据数据集内已有变量，你是否创建了任何新变量？
 
-##### 4.1身份认证指数
+##### 4.1 身份认证指数
 
-不同认证，赋予不同的权重，设计一个身份认证指数来综合各种认证方式的效果。
+项目数据集中提供了很多种认证方式，我将其赋予不同的权重，构建了线性组合模型，设计了一个新变量：身份认证指数，来综合各种认证方式的效果。
 
-本文提出这种思路，并给出示例，更为权重可以根据相关资料进行深入探索。
+线性组合模型为
 
-当所有方式均成功认证，则为满分(1分)。
+$$ 身份认证指数 = (1.0 * 手机认证指数 + 2.0 * 户口认证指数 + 1.0 * 视频认证指数 + 2.0 * 学历认证指数 + 3.0 * 征信认证指数 + 1.0 * 淘宝认证指数)/(1+2+1+2+3+1) $$
+
+显然，当所有方式均成功认证，则为满分(1分)。
+
+本文提出这种思路，并给出示例，如何确定权重采用怎样的组合模型可以根据相关资料进行深入探索。
 
 ```{r echo=FALSE}
 
@@ -248,9 +271,6 @@ LC_clean$淘宝认证指数 <- as.numeric(as.character(ifelse(LC_clean$淘宝认
 # 赋予各种认证方式不同的权重
 LC_clean$身份认证指数 <- (1.0 * LC_clean$手机认证指数 + 2.0 * LC_clean$户口认证指数 + 1.0 * LC_clean$视频认证指数 + 2.0 * LC_clean$学历认证指数 + 3.0 * LC_clean$征信认证指数 + 1.0 * LC_clean$淘宝认证指数)/(1+2+1+2+3+1)
 
-# 查看身份认证指数的描述性统计值
-summary(LC_clean$身份认证指数)
-
 # 绘制身份认证指数分布柱状图
 ggplot(aes(x = LC_clean$身份认证指数), data = LC_clean) +
     geom_bar(aes(color = 性别)) +
@@ -260,9 +280,16 @@ ggplot(aes(x = LC_clean$身份认证指数), data = LC_clean) +
 
 ```
 
+身份认证指数的统计量如下，
+
+```{r echo=FALSE}
+# 查看身份认证指数的描述性统计值
+summary(LC_clean$身份认证指数)
+```
+
 身份认证指数的平均值分布为0.13分，中位数为0.1分。由此发现，大量的借款人并没有进行身份认证。应当采用用户运营手段来促使借款人认证，获取足够数据源便于分析。
 
-##### 4.2 身份认证指数
+##### 4.2 历史成功单次借款金额
 
 基于 LC_clean 数据集，定义了 历史成功单次借款金额(Historical successful single loan amount)简写为 hs1LA，即每笔交易借款金额平均值。
 
@@ -274,45 +301,58 @@ LC_clean$历史成功借款金额 <- as.numeric(as.character(LC_clean$历史成�
 LC_clean$hs1LA <- ifelse(LC_clean$历史成功借款次数 >= 1, LC_clean$历史成功借款金额 / LC_clean$历史成功借款次数, 0)
 
 # 历史成功单次借款金额的分布情况
+## 辅助线为50 000
 ggplot(aes(x = LC_clean$hs1LA), data = LC_clean) +
     geom_histogram(bins = 100) +
-    scale_y_log10() +
+    scale_y_sqrt() +
+    geom_vline(aes(xintercept = 50000, color = I("blue")), linetype = "dashed", alpha = .75) +
+    geom_vline(aes(xintercept = 5, color = I("orange")), linetype = "dashed", alpha = .75) +
     xlab("历史成功单次借款金额") +
-    ylab("交易数量") +    
+    ylab("交易数量(取平方根处理)") +    
     theme(text = element_text(family = "STHeiti"))
+```
 
+历史成功单次借款金额的统计量如下，
+
+```{r echo=FALSE}
 # 统计学变量
 summary(LC_clean$hs1LA)
-
 ```
+
+由此可见，
+
+- 大量借款交易中的历史成功单次借款金额在50 000元（蓝色虚线）以下。
+- 且历史成功单次借款金额为0元（橙色虚线）的交易也大量存在，有150 000笔以上。
 
 ### 5. 在已经探究的特性中，是否存在任何异常分布？你是否对数据进行一些操作，如清洁、调整或改变数据的形式？如果是，你为什么会这样做？
 
-对借款金额分布的探究中，进行了对数和开方的处理。结合统计量成果，可以直观感受到p2p借贷业务主要是小金额交易。由于大量交易是小金额的，所以选取小于50000元的交易，从而可以发现更多成果。
+对借款金额分布的探究中，进行了对数和开方的处理。结合统计量成果，可以直观感受到P2P借贷业务主要是小金额交易。由于大量交易是小金额的，所以选取小于50 000元的交易，从而可以发现更多成果。
 
 # 双变量绘图
 
-针对LC_clean数据集进行分析。通过绘制散点图矩阵，对各变量之间关系获得全局感受。
+针对LC_clean数据集进行分析。通过绘制散点图矩阵，对许多组变量同时进行对比，获得数据集的整体感知。
 
 ```{r echo=FALSE, Bivariate_Plots}
 # 针对LC_clean，分析各变量之间关系
 # 选出部分重点关注的变量构成新子集 LC_clean_subset 进行绘制
-LC_clean_subset <- LC_clean[, c("借款金额", "借款期限", "借款利率", "初始评级", "借款类型", "是否首标", "年龄", "性别", "历史成功借款次数", "历史成功借款金额", "历史正常还款期数", "历史逾期还款期数", "hs1LA")]
+LC_clean_num <- LC_clean[, c("借款金额", "年龄", "历史成功借款次数", "历史成功借款金额", "历史正常还款期数", "历史逾期还款期数", "身份认证指数", "hs1LA")]
 
 # 绘制散点图矩阵
 set.seed(1234)
-ggpairs(LC_clean_subset[sample(nrow(LC_clean_subset),5000),]) +
-    theme(text = element_text(family = "STHeiti"))
+ggpairs(LC_clean_num[sample(nrow(LC_clean_num),5000),], 
+    lower = list(combo = wrap("facethist", binwidth = 0.5))) +
+    theme(text = element_text(family = "STHeiti", size = 6))
 ```
 
-借款金额和数值型变量的相关性分析
+LC数据集中部分变量的相关性分析矩阵如下，
 
 ```{r echo=FALSE}
 
 # 借款金额和数值型变量的相关性分析
-LC_clean_num <- LC_clean[, c("借款金额", "借款期限", "借款利率", "年龄", "历史成功借款次数", "历史成功借款金额", "历史正常还款期数", "历史逾期还款期数")]
-LC_clean_num$历史成功借款次数 <- suppressWarnings(as.numeric(as.character(LC_clean_num$历史成功借款次数)))
-LC_clean_num$历史成功借款金额 <- suppressWarnings(as.numeric(as.character(LC_clean_num$历史成功借款金额)))
+#LC_clean_num <- LC_clean[, c("借款金额", "年龄", "历史成功借款次数", "历史成功借款金额", "历史正常还款期数", "历史逾期还款期数", "身份认证指数", "hs1LA")]
+
+#LC_clean_num$历史成功借款次数 <- suppressWarnings(as.numeric(as.character(LC_clean_num$历史成功借款次数)))
+#LC_clean_num$历史成功借款金额 <- suppressWarnings(as.numeric(as.character(LC_clean_num$历史成功借款金额)))
 ##str(LC_clean_num)
 
 # 绘制相关性矩阵
@@ -333,7 +373,6 @@ corrplot(cor(LC_clean_num), method = 'number', number.digits = 1, number.cex = .
 #### 1. 借款金额与年龄的关系
 
 ```{r echo=FALSE}
-
 # 借款金额用 以10为底的对数 来处理
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
     geom_point(aes(color = I('blue')), alpha = 1/10) +
@@ -346,17 +385,16 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
     xlab("年龄") +
     ylab("借款金额") +
     theme(text = element_text(family = "STHeiti"))
-
 ```
 
-由此可见，在借款金额用对数处理后，大量交易处在100000元以下，借款人年龄在55岁以下的区间内。还有以下有趣的发现：
+由此可见，在借款金额用对数处理后，大量交易处在100 000元以下，借款人年龄在55岁以下的区间内。还有以下发现：
 
 - 在17-20岁之间，借款金额随年龄增长而降低。在20岁是低谷值。
 - 在20-25岁之间，随着年龄的增加，借款金额是不断增加的。
 - 年龄增长至*25岁后*，借款金额也就进入了平台期。借款金额均值和中位数增长很小。
 - 年龄增长至*50岁后*，借款交易的积极性降低。交易量略微减少。
 
-#### 2. 与身份认证指数之间的关系
+#### 2. 借款金额与身份认证指数之间的关系
 
 ```{r echo=FALSE}
 # 借款金额用 以10为底的对数 来处理
@@ -378,7 +416,7 @@ ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), data = L
 - 随着身份认证指数的增加，借款金额是有增加的。
 - 随着身份认证指数的增加，指数在(0.25-0.375)范围内时，借款金额的均值、0.2和0.8位数值变化并不大，但是当指数大于0.9时，借款金额曲线陡然上升，可能是原本借款较多的人愿意借更多的钱，也可能是样本量太少而错误影响了曲线。
 
-#### 3. 与历史成功单次借款金额(hs1LA)的关系
+#### 3. 借款金额与历史成功单次借款金额(hs1LA)的关系
 
 ```{r echo=FALSE}
 # 散点图
@@ -386,7 +424,8 @@ ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), data = L
 hs1LA1 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_clean) +
     geom_point(aes(color = I('blue')), alpha = 1/10) +
     xlab("历史成功单次借款金额") +
-    ylab("借款金额 - 无处理") +
+    ylab("借款金额") +
+    labs(title = "借款金额 - 无处理") +
     theme(text = element_text(family = "STHeiti"))
 
 # 借款金额log10
@@ -394,7 +433,8 @@ hs1LA2 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_c
     geom_point(aes(color = I('blue')), alpha = 1/10) +
     coord_trans(y = "log10") +
     xlab("历史成功单次借款金额") +
-    ylab("借款金额 - 对数log10处理") +
+    ylab("借款金额") +
+    labs(title = "借款金额 - 对数log10处理") +
     theme(text = element_text(family = "STHeiti"))
 
 # 借款金额sqrt
@@ -402,7 +442,8 @@ hs1LA3 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_c
     geom_point(aes(color = I('blue')), alpha = 1/10) +
     coord_trans(y = "sqrt") +
     xlab("历史成功单次借款金额") +
-    ylab("借款金额 - 开平方处理") +
+    ylab("借款金额") +
+    labs(title = "借款金额 - 开平方处理") +
     theme(text = element_text(family = "STHeiti"))
 # 绘图
 grid.arrange(hs1LA1, hs1LA2, hs1LA3, ncol = 1)   
@@ -416,8 +457,10 @@ grid.arrange(hs1LA1, hs1LA2, hs1LA3, ncol = 1)
 
 #### 4. 在不同初始等级条件下借款金额的变化情况
 
+LC数据集中的初始等级的数量统计如下，
+
 ```{r echo=FALSE}
-summary(LCIS_clean$初始评级)
+summary(LC_clean$初始评级)
 ```
 
 箱形图绘制如下，
@@ -441,20 +484,22 @@ by(LC_clean$借款金额, LC_clean$初始评级, summary)
 
 通过箱形图和四分位数间距计算结果，可以发现，
 
-- A和B评级的状况（均值和四分位数）基本相同；
+- A和B评级的状况（均值和四分位数）基本相同。
 - 随着等级不断降低，借款金额均值有提高的趋势。说明初始等级并不会阻碍用户的借款热情。
 
 
 #### 5. 在不同借款类型下借款金额的变化情况
 
+LC数据集中的借款类型的数量统计如下，
+
 ```{r echo=FALSE}
-summary( LC_clean$借款类型)
+summary(LC_clean$借款类型)
 ```
 
 箱形图绘制如下，
 
 ```{r echo=FALSE}
-# 局部显示了借款金额在0 - 200000范围内的情况
+# 局部显示了借款金额在0 - 200 000范围内的情况
 ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款金额), data = LC_clean) +
     geom_boxplot() +
     xlab("借款类型") +  
@@ -474,41 +519,47 @@ by(LC_clean$借款金额, LC_clean$借款类型, summary)
 
 #### 6. 不同认证方式之间的关系
 
-项目数据中提供了多种认证方式，我在之前的文字中提到了身份认证指数，这是一个线性模型的结果值，能够综合各种认证方式的效果。我好奇的是，每一位用户在进行了某种方式的认证后，是否会再进行其他认证？首先看下各种认证方式之间的相关性。
+项目数据中提供了多种认证方式，我在之前的文字中提到了身份认证指数，这是一个线性模型的结果值，能够综合各种认证方式的效果。我好奇的是每一位用户在进行了某种方式的认证后，是否会影响到他再进行其他认证？先来看下各种认证方式之间的相关性。
 
 ```{r echo=FALSE}
-LC_clean_Cert <- LC_clean[, c("手机认证指数", "户口认证指数", "视频认证指数", "学历认证指数", "征信认证指数", "淘宝认证指数")]
-corrplot(cor(LC_clean_Cert), method = 'number', number.digits = 1, number.cex = 1, addCoefasPercent = TRUE, family = 'STHeiti') 
+LC_clean_Cert <- LC_clean[, c("手机认证指数", "户口认证指数", "视频认证指数", "学历认证指数", "征信认证指数", "淘宝认证指数", "身份认证指数")]
+corrplot(cor(LC_clean_Cert), method = 'number', number.digits = 1, number.cex = .75, addCoefasPercent = TRUE, family = 'STHeiti') 
 ```
 
 手机认证的比例为
 ```{r echo=FALSE}
-sum(LC_clean_Cert$手机认证指数) / length(LC_clean_Cert$手机认证指数)
+x1 = sum(LC_clean_Cert$手机认证指数) / length(LC_clean_Cert$手机认证指数)
+paste0(format(x1 * 100, digits=3), "%")
 ```
 
 户口认证的比例为
 ```{r echo=FALSE}
-sum(LC_clean_Cert$户口认证指数) / length(LC_clean_Cert$户口认证指数)
+x2 = sum(LC_clean_Cert$户口认证指数) / length(LC_clean_Cert$户口认证指数)
+paste0(format(x2 * 100, digits=3), "%")
 ```
 
 视频认证的比例为
 ```{r echo=FALSE}
-sum(LC_clean_Cert$视频认证指数) / length(LC_clean_Cert$视频认证指数)
+x3 = sum(LC_clean_Cert$视频认证指数) / length(LC_clean_Cert$视频认证指数)
+paste0(format(x3 * 100, digits=3), "%")
 ```
 
 学历认证的比例为
 ```{r echo=FALSE}
-sum(LC_clean_Cert$学历认证指数) / length(LC_clean_Cert$学历认证指数)
+x4 = sum(LC_clean_Cert$学历认证指数) / length(LC_clean_Cert$学历认证指数)
+paste0(format(x4 * 100, digits=3), "%")
 ```
 
 征信认证的比例为
 ```{r echo=FALSE}
-sum(LC_clean_Cert$征信认证指数) / length(LC_clean_Cert$征信认证指数)
+x5 = sum(LC_clean_Cert$征信认证指数) / length(LC_clean_Cert$征信认证指数)
+paste0(format(x5 * 100, digits=3), "%")
 ```
 
 淘宝认证的比例为
 ```{r echo=FALSE}
-sum(LC_clean_Cert$淘宝认证指数) / length(LC_clean_Cert$淘宝认证指数)
+x6 = sum(LC_clean_Cert$淘宝认证指数) / length(LC_clean_Cert$淘宝认证指数)
+paste0(format(x6 * 100, digits=3), "%")
 ```
 
 由此可发现以下有趣的现象，
@@ -521,7 +572,7 @@ sum(LC_clean_Cert$淘宝认证指数) / length(LC_clean_Cert$淘宝认证指数)
 # 双变量分析
 ### 探讨你在这部分探究中观察到的一些关系。
 
-通过探索分析发现以下现象，
+通过上述图文成果可发现以下有趣的现象，
 
 - 借款金额会随着借款人年龄、身份认证指数、历史成功单次借款金额（hs1LA）增加而增加。
 - 借款类型为电商的用户，会借更多的钱。
@@ -537,11 +588,15 @@ sum(LC_clean_Cert$淘宝认证指数) / length(LC_clean_Cert$淘宝认证指数)
 
 # 多变量绘图
 
-#### 1. 借款金额会随着借款人年龄、在不同初始评级、性别和借款类型的条件下 变化情况
+#### 1. 随着借款人年龄的变化，借款金额会发生怎样的变化
+
+LC数据集中年龄的统计量如下，
 
 ```{r echo=FALSE}
 summary(LC_clean$年龄)
 ```
+
+##### 1.1 在不同初始评级条件下，借款金额随年龄发生的变化
 
 ```{r echo=FALSE}
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
@@ -553,8 +608,8 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初�
 ```
 
 - 从该散点图中可感受随着年龄变化，借款金额变化的总体感觉。在22岁之前借款金额较为稳定，金额数目也不大；在22岁之后，借款总额的均值和中位数值会大于22岁之前的值，而且会有较大数额的借款。
-- 在17-56岁范围内，借款金额大于100000元的主要是初始评级为B或A的用户。
-- 初始评级为C、D类用户，在年龄跨度内均普遍存在，其借款金额主要分布在50000元以下。
+- 在17-56岁范围内，借款金额大于100 000元的主要是初始评级为B或A的用户。
+- 初始评级为C、D类用户，在年龄跨度内均普遍存在，其借款金额主要分布在50 000元以下。
 - 初始评级为E、F类用户，借款数据量很少。
 - 从散点图分布情况来看，借款金额和年龄的函数关系可能是 y ~ (x-a)^(2n)。
 
@@ -566,7 +621,7 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初�
 # 35-60 
 
 LC_clean$age_bucket <- cut(LC_clean$年龄, c(15, 25, 35, 60))
-### LC_age_clean <- subset(LC, !is.na(年龄))
+
 # 借款金额用 以10为底的对数 来处理
 ## 选用了wsj主题
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
@@ -577,13 +632,13 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
     scale_colour_wsj(name="年龄分组") +
     xlab("年龄") +
     ylab("借款金额的中位数值") +
-    labs(title = "不同年龄段借款金额的变化") +
+    labs(title = "不同年龄段的借款金额中位数值变化") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 ```
 
-按照年龄切块分组，获取相应年龄分组内的借款金额中位数值，可发现随着年龄越大，借款金额越多。
+按照年龄切块分组，获取相应年龄分组内的借款金额中位数值，可发现随着年龄越大，借款金额的中位数值越大。
 
-借款金额会随着借款人年龄、不同初始评级和性别的条件下 变化情况，
+##### 1.2 在不同性别条件下，借款金额随年龄发生的变化
 
 ```{r echo=FALSE}
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$性别), data = LC_clean) +
@@ -594,7 +649,7 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$性�
     theme(text = element_text(family = "STHeiti"))
 ```
 
-- facet wrap by 性别
+按照性别分面绘图如下，
 
 ```{r echo=FALSE}
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
@@ -608,11 +663,11 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初�
 
 增加了性别这个维度后，可发现以下有趣现象，
 
-- 借款金额大于100000的标的，评级为A或者B的女性用户交易量要多于男性。
-- 借款金额小于50000的标的，女性和男性交易量分布情况类似。
-- 初始评级为A的男性用户借款金额都小于100000，而女性用户的借款金额范围分布较广。
+- 借款金额大于100 000元的标的，评级为A或者B的女性用户交易量要多于男性。
+- 借款金额小于50 000元的标的，女性和男性交易量分布情况类似。
+- 初始评级为A的男性用户借款金额都小于100 000元，而女性用户的借款金额范围分布较广。
 
-借款金额会随着借款人年龄、不同借款类型和初始评级的条件下 变化情况，
+##### 1.3 在不同借款类型条件下，借款金额随年龄发生的变化，
 
 ```{r echo=FALSE}
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$借款类型), data = LC_clean) +
@@ -623,7 +678,7 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$借�
     theme(text = element_text(family = "STHeiti"))
 ```
 
-- facet wrap by 借款类型
+按照借款类型分面绘图如下，
 
 ```{r echo=FALSE}
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
@@ -637,15 +692,20 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初�
 
 增加了借款类型这个维度后，可发现以下有趣现象，
 
-- 大于100000元的借款金额主要来自于“APP快闪”或“其他”类型的用户。
+- 大于100 000元的借款金额主要来自于“APP快闪”或“其他”类型的用户。
 - 初始评级为A的标的主要来自于APP快闪。
 
+#### 2. 随着借款人身份认证指数的变化，借款金额会发生怎样的变化
 
-
-#### 2. 借款金额会随着借款人身份认证指数、不同初始评级的条件下 变化情况
+- 每个身份认证指数的数量统计
 
 ```{r echo=FALSE}
 table(LC_clean$身份认证指数)
+```
+
+- 身份认证指数的统计变量
+
+```{r echo=FALSE}
 summary(LC_clean$身份认证指数)
 ```
 
@@ -669,56 +729,78 @@ ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额, color = L
     theme(text = element_text(family = "STHeiti"))
 ```
 
-可能由于平台推广和用户认可程度导致大量用户没有进行身份认证。这导致了身份认证指数平均值偏低。所以在之后的分析中我提到了不考虑认证指数为0的情况，这种假设分析的意义在于预测随着身份认证得到用户普遍认可，平台价值得到充分发挥的理想情况。
+可能由于平台推广和用户认可程度导致大量用户没有进行身份认证。这导致了身份认证指数平均值偏低。所以在之后的分析中我提到了不考虑认证指数为0的情况，这种假设分析的意义在于当身份认证得到用户普遍认可时，来预测这种平台价值得到充分发挥的理想情况。
 
 - 由于大量的身份认证指数为0的用户，所以平均值较低为0.12，但是从散点图分布来看，不考虑为身份认证指数为0的用户，均值应该在0.3-0.5之间。
-- 借款金额大于100000元的标的，主要来自身份认证指数为0.3-0.5范围的用户。
-- 大量的身份认证指数为0的用户是女性，且是初始评级为A类的用户。值得注意的是，在借款金额大于100000元的大额标的中，该部分用户占有相当了一部分。
+- 借款金额大于100 000元的标的，主要来自身份认证指数为0.3-0.5范围的用户。
+- 大量的身份认证指数为0的用户是女性，且是初始评级为A类的用户。值得注意的是，在借款金额大于100 000元的大额标的中，该部分用户占有相当了一部分。
 - 大量的身份认证指数为0的用户是来自APP闪电的用户。
 - 来自电商平台的用户可能不愿意进行身份认证。若不考虑认证指数为0的情况，借款类型为电商的标的中用户的平均身份认证指数低于其他借款类型用户。
 
-##### 身份认证指数划分区段后分析
+##### 对身份认证指数划分区段后的分析
 
-随着年龄的增加，在不同认证指数范围分组范围内，借款金额的变化情况如下，
+首先将身份认证指数划分区段，并赋予不同的区段名称，例如0 - 0.1为Fair。具体如下，
+
+- Fair: 0～0.1
+- Good: 0.1～0.2
+- Premium: 0.2～0.5
+- Ideal: 0.5～1
+
+在不同认证指数范围分组范围内，借款金额的变化情况如下，
 
 ```{r echo=FALSE}
 
-summary(LC_clean$身份认证指数)
-
 # 身份验证指数分块
 # 按照以下指数分段（为保证将0包含在[0,1)范围内，设置第一个范围为-1～0.1）
-# -1～0.1
-# 0.1～0.2
-# 0.2～0.5
-# 0.5～1
+# Fair: -1～0.1
+# Good: 0.1～0.2
+# Premium: 0.2～0.5
+# Ideal: 0.5～1
 LC_clean$CertIndex_bucket <- cut(LC_clean$身份认证指数, c(-1, 0.1, 0.2, 0.5, 1))
+LC_clean$CertIndex_bucket_factor <- factor(LC_clean$CertIndex_bucket,
+    labels = c("Fair", "Good", "Premium", "Ideal"))
 
 # 借款金额用 以10为底的对数 来处理
 ## 选用了wsj主题
 ## 年龄 = 40处为辅助线
 ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
-    geom_line(aes(color = LC_clean$CertIndex_bucket),
+    geom_line(aes(color = LC_clean$CertIndex_bucket_factor),
               stat = 'summary',
               fun.y = median) +
-    geom_vline(aes(xintercept = 40), color = I("darkblue"), linetype = "dashed") + 
+    geom_vline(aes(xintercept = 40), color = I("darkblue"), linetype = "dashed") +
     xlab("年龄") +
     ylab("借款金额") +
     labs(title = "不同年龄段借款金额的变化") +
-    scale_colour_wsj(name="身份认证分组") +
+    scale_colour_wsj(name = "身份认证分组") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 ```
 
-由此可见以下有趣的现象，
+由此可发现以下有趣的现象，
 
 - 身份认证指数在0-0.1范围内的交易普遍低于其余范围内的借款金额。
 - 身份认证指数在0.1-0.2范围内的交易的借款金额较高。
 - 年龄大于40岁后，各个范围内的借款金额曲线均有较大的震荡。可能由于数据量较少，也可能由于这个年龄段的借款行为次数减少，不具有代表性的交易数据干扰了曲线形式。
 
-#### 3. 借款金额会随着借款人历史成功单次借款金额（hs1LA）、不同初始评级的条件下 变化情况
+#### 3. 随着借款人历史成功单次借款金额（hs1LA）的变化，借款金额会发生怎样的变化
+
+历史成功单次借款金额的统计量如下，
 
 ```{r echo=FALSE}
 summary(LC_clean$hs1LA)
 ```
+
+```{r echo=FALSE}
+# 放大hs1LA范围在100-25 000的区间
+ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
+    geom_point() +
+    scale_colour_wsj(name="初始评级") +
+    xlab("历史成功单次借款金额") +
+    ylab("借款金额") +
+    coord_cartesian(xlim = c(100, 25000),expand = F) +
+    theme(text = element_text(family = "STHeiti"))
+```
+
+需要说明的是，上图是放大了历史成功单次借款金额为100-25 000元范围内的变化情况。
 
 ```{r echo=FALSE}
 # 性别分面
@@ -742,31 +824,20 @@ ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初�
     theme(text = element_text(family = "STHeiti"))
 ```
 
-```{r echo=FALSE}
-# 放大hs1LA范围在100-25000的区间
-ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
-    scale_colour_wsj(name="初始评级") +
-    xlab("历史成功单次借款金额") +
-    ylab("借款金额") +
-    coord_cartesian(xlim = c(100, 25000),expand = F) +
-    theme(text = element_text(family = "STHeiti"))
-```
-
-由此可见以下有趣的现象，
+由此可发现以下有趣的现象，
 
 - 从散点图分布情况来看，随着hs1LA的增加，借款金额增加。
 - 相比男性，女性借款用户的历史成功单次借款金额hs1LA 为0的情况更多。
 - 相比其他借款类型，APP闪电和其他类型中的历史成功单次借款金额hs1LA 为0的情况更多。
-- 当 hs1LA 大于200000后，单次交易的借款金额一般也会大于100000元。
-- 当 hs1LA 大于200000后，借款人的初始评级一般为B类。
-- 放大hs1LA在100-25000范围内的交易来看，这个范围内的用户一般没有较大借款金额的交易（金额普遍小于50000）；当大于3000时，借款金额一定程度上升。
+- 当 hs1LA 大于200 000后，单次交易的借款金额一般也会大于100 000元。
+- 当 hs1LA 大于200 000后，借款人的初始评级一般为B类。
+- 放大hs1LA在100-25 000范围内的交易来看，这个范围内的用户一般没有较大借款金额的交易（金额普遍小于50 000）；当大于3000时，借款金额一定程度上升。
 
-#### 4. 借款行为冲动还是保守？
+#### 4. 借款行为是冲动还是保守？
 
-可能某一位借款人会借一大笔钱，但是相比历史成功单次借款金额并不大，比如两者比值小于1，说明这位借款人在这笔交易中并没有突破之前的借款金额均值，属于保守的借款行为。我创建了一个新指标 借款行为指数，来描述这种是否突破历史借款行为的情况。
+可能某一位借款人会借一大笔钱，但是相比历史成功单次借款金额并不大，比如两者比值小于1，说明这位借款人在这笔交易中并没有突破之前的借款金额均值，属于保守的借款行为。我创建了一个新变量**借款行为指数**，来描述这种是否突破历史借款行为的情况。如果借款行为指数大于1，则为冲动，小于1则为保守。
 
-需要说明的是，如果某笔交易的历史成功单次借款金额hs1LA为 0 的话，作为分母的除法运算就无法进行，则统一设定这类情况的hs1LA值为1。
+需要说明的是，如果某笔交易的历史成功单次借款金额hs1LA为**0**的话，作为分母的除法运算就无法进行，则统一设定这类情况的hs1LA值为1。
 
 ```{r echo=FALSE}
 # 创建变量 借款行为指数
@@ -774,10 +845,18 @@ LC_clean$借款行为指数 <- NA
 LC_clean$temp_hs1LA <- NA
 LC_clean$temp_hs1LA <- as.numeric(ifelse(LC_clean$hs1LA == 0, 1, LC_clean$hs1LA))
 LC_clean$借款行为指数 <- LC_clean$借款金额/LC_clean$temp_hs1LA
-summary(LC_clean$借款行为指数)
-range(LC_clean$借款金额)
-range(LC_clean$hs1LA)
 
+```
+
+借款行为指数的统计量如下，
+
+```{r echo=FALSE}
+summary(LC_clean$借款行为指数)
+#range(LC_clean$借款金额)
+#range(LC_clean$hs1LA)
+```
+
+```{r echo=FALSE}
 # 借款类型箱形图    
 ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款行为指数), data = LC_clean) +
     geom_boxplot() +
@@ -785,6 +864,11 @@ ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款行为指数), data = L
     ylab("借款行为指数") +
     coord_cartesian(ylim = c(0, 8000)) +
     theme(text = element_text(family = "STHeiti"))
+```
+
+按照借款类型分类计算的借款行为指数统计量如下，
+
+```{r echo=FALSE}
 # 统计量
 by(LC_clean$借款行为指数, LC_clean$借款类型, summary)
 ```
@@ -797,12 +881,16 @@ ggplot(aes(x = LC_clean$初始评级, y = LC_clean$借款行为指数), data = L
     ylab("借款行为指数") +
     coord_cartesian(ylim = c(0, 8000)) +
     theme(text = element_text(family = "STHeiti"))
+```
 
+按照借款类型分类计算的借款行为指数统计量如下，
+
+```{r echo=FALSE}
 # 统计量
 by(LC_clean$借款行为指数, LC_clean$初始评级, summary)
 ```
 
-在进行一笔新交易时有以下有趣现象可以发现，
+根据以上图文成果，在进行一笔新交易时有以下有趣现象可以发现，
 
 - 每一笔交易中的借款行为较之以往行为来说并不保守。中位数均大于1。
 - 由于有很多hs1LA被设定为1，所以计算出的借款行为指数很大，拉高了均值。
@@ -825,23 +913,24 @@ by(LC_clean$借款行为指数, LC_clean$初始评级, summary)
 
 ### 你是否创建过数据集的任何模型？讨论你模型的优缺点。
 
-建立了借款金额和年龄、身份认证指数和历史成功单次借款金额（hs1LA）的拟合模型，结果表明
-以年龄、身份认证指数、历史成功单次借款金额（hs1LA）为自变量，借款金额为因变量，并对各个变量做了转化，我试图构建拟合模型，效果并不是很好。可能将借款金额进行分块拟合，会得到较好的结果。这也是预测模型下一步的改进点。
+本文建立了针对借款金额的拟合模型。以年龄、身份认证指数、历史成功单次借款金额（hs1LA）为自变量，借款金额为因变量，并对各个变量做了转化，从拟合的结果来看，效果并不是很好。
 
-借款金额~年龄、身份认证指数、历史成功单次借款金额（hs1LA）的拟合模型如下，
+可能将借款金额进行分块拟合，会得到较好的结果。这也是之后研究过程中，对预测模型的改进点。
+
+**借款金额** ~ **年龄、身份认证指数、历史成功单次借款金额（hs1LA）**的拟合模型如下，
 
 ```{r echo=FALSE}
-
 m1 <- lm(I(log(LC_clean$借款金额)) ~  I(abs(LC_clean$年龄 - 29)^4), data = LC_clean)
 m2 <- update(m1, ~ . + LC_clean$身份认证指数)
 m3 <- update(m2, ~ . + LC_clean$hs1LA)
 mtable(m1, m2, m3)
-
 ```
 
 ------
 
 # 定稿图与总结
+
+需要说明的是，本部分数据均来自LC数据集。
 
 ### 绘图一
 
@@ -849,11 +938,11 @@ mtable(m1, m2, m3)
 ggplot(aes(x = LC_clean$借款金额), data = LC_clean) +
     geom_histogram(bins = 100) +
     annotate("rect",
-        xmin = 1000, xmax = 8000,
+        xmin = 1000, xmax = 10000,
         ymin = 0, ymax = Inf,
         alpha = .3, fill = "blue") +
     scale_x_log10() +
-    xlab("借款金额") +
+    xlab("借款金额(元)") +
     ylab("交易数量") + 
     labs(title = "log10处理后的借款金额") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
@@ -861,11 +950,13 @@ ggplot(aes(x = LC_clean$借款金额), data = LC_clean) +
 
 ### 描述一
 
-- 大量交易的借款金额处在1000～8000这个范围内（蓝色区域为该范围）。
-- 大于50000的借款很少，在拍拍贷这个P2P平台中，大量交易还属于小额借款。所以重点关注金额在50000元以下的业务。
-
+- 大量交易的借款金额处在1000～10 000这个范围内（蓝色区域为该范围）。
+- 大于50 000的借款很少，在拍拍贷这个P2P平台中，大量交易还属于小额借款。所以重点关注金额在50 000元以下的业务。
 
 ### 绘图二
+
+根据前文提到的单变量分析成果，本次绘图重点关注金额在50 000元以下的业务。如需关注其他范围交易可以参考之前的绘图。
+
 ```{r echo=FALSE, Plot_Two}
 s2_1 <- ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
     geom_point(aes(color = I('blue')), alpha = 1/10) +
@@ -876,8 +967,8 @@ s2_1 <- ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_cl
               linetype = 'dashed', color = 'orange', alpha = .7) +
     geom_line(stat = 'summary', fun.y = median, color = 'red') +
     coord_cartesian(ylim = c(0, 50000)) +
-    xlab("年龄") +
-    ylab("借款金额") +
+    xlab("年龄(岁)") +
+    ylab("借款金额(元)") +
     labs(title = "log10借款金额 ~ 年龄") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 
@@ -891,7 +982,7 @@ s2_2 <- ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), 
     geom_line(stat = 'summary', fun.y = median, color = 'red') +
     coord_cartesian(ylim = c(0, 50000)) +
     xlab("身份认证指数") +
-    ylab("借款金额") +
+    ylab("借款金额(元)") +
     labs(title = "log10借款金额 ~ 身份认证指数") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 
@@ -899,8 +990,8 @@ s2_3 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_cle
     geom_point(aes(color = I('blue')), alpha = 1/10) +
     coord_trans(y = "log10") +
     coord_cartesian(ylim = c(0, 50000)) +
-    xlab("历史成功单次借款金额") +
-    ylab("借款金额") +
+    xlab("历史成功单次借款金额(元)") +
+    ylab("借款金额(元)") +
     labs(title = "log10借款金额 ~ 历史成功单次借款金额") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 
@@ -912,14 +1003,14 @@ s2_4 <- ggplot(aes(x = LC_clean$初始评级, y = LC_clean$借款金额), data =
     geom_boxplot() +
     coord_cartesian(ylim = c(0, 13000)) +
     xlab("初始评级") +  
-    ylab("借款金额") +
+    ylab("借款金额(元)") +
     labs(title = "借款金额 ~ 初始评级") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 
 s2_5 <- ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款金额), data = LC_clean) +
     geom_boxplot() +
     xlab("借款类型") +  
-    ylab("借款金额") +
+    ylab("借款金额(元)") +
     coord_cartesian(ylim = c(0, 200000)) +
     labs(title = "借款金额 ~ 借款类型") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
@@ -933,8 +1024,9 @@ grid.arrange(s2_4, s2_5, ncol = 1)
 - 借款类型为电商的用户，会借更多的钱。
 - 初始评级对借款金额的影响不是很明显，甚至有一定并不明显的负相关性。
 
-
 ### 绘图三
+
+需要再次说明的是在拍拍贷这个P2P平台中，大量交易还属于小额借款，本图重点关注金额在50 000元以下的业务。
 
 ```{r echo=FALSE, Plot_Three}
 ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额,
@@ -942,17 +1034,17 @@ ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额,
        data = LC_clean) +
     geom_point() +
     scale_colour_wsj(name="年龄分组") +
-    xlab("历史成功单次借款金额") +
-    ylab("借款金额") +
-    facet_wrap(~LC_clean$CertIndex_bucket) +  
+    xlab("历史成功单次借款金额(元)") +
+    ylab("借款金额(元)") +
+    facet_wrap(~LC_clean$CertIndex_bucket_factor) +  
     coord_cartesian(xlim = c(0, 50000),expand = T) +
-    labs(title = "借款金额 ~ 历史成功单次借款金额") +
+    labs(title = "借款金额 ~ 历史成功单次借款金额(身份认证分面)") +
     theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
 ```
 
 ### 描述三
 
-本图融合多变量绘图分析中的可以观察到的大部分现象。需要说明的是在拍拍贷这个P2P平台中，大量交易还属于小额借款，本图重点关注金额在50000元以下的业务。
+本图融合了多变量绘图分析过程中可以观察到的大部分成果。
 
 - 随着年龄的增加，借款金额会逐步增加，可能到29岁年龄后会逐步降低。可以发现(25,35]和(35,60]年龄范围内的散点一般在(15,25]范围散点之上。
 - 身份认证指数在0.1-0.2范围内的交易的借款金额明显高于(0.2,0.5]和(0.5,1.0].
@@ -962,12 +1054,12 @@ ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额,
 
 # 反思
 
-依托拍拍贷平台的交易数据，本文探索了借款金额及其相关变量的变化关系。选取了年龄、初始评级和性别的数据集初始变量，根据业务场景创建了身份认证指数和历史成功单次借款金额两个衍生变量，通过可视化手段探究这些变量和借款金额的变化关系。
+依托拍拍贷平台的交易数据，本文探索了借款金额及相关变量的变化关系。选取了数据集中年龄、初始评级和性别的这些初始变量，根据业务场景创建了身份认证指数和历史成功单次借款金额两个衍生变量，通过可视化手段探究这些变量和借款金额的变化关系。
 
-根据现象分析出的结论有一定的普适性，但是需要在之后进一步修正以下问题：
+根据现象分析出的成果对现实交易做出了一些维度的刻画，但仍需要在今后进一步完善以下问题：
 
 - 可视化手段的丰富。在了解实际借贷业务后，根据实际需求来进一步充实数据可视化的表达方式。
-- 异常值的删选原则：由于个别异常值（主要是可能的极大值），导致一些趋势性的结论可能会被这些值所错误引导。但是由于对于该业务数据的可靠性没有充分把握，本次项目我选择保留异常值，只是删除明显的错误值。可以进一步仔细分析数据，或者根据业务人员的相关处理原则来进行数据预处理，从而得到更合理的结论。
-- 对衍生变量的创建原则进一步优化。创建了两个新变量是为了丰富分析的维度，创建是否合理，是否考虑业务的实际需求，是否引入了不可遇见的错误，这些
+- 异常值的筛选和处理：由于个别异常值（主要是可能的极大值），导致一些趋势性的结论可能会被这些值所错误引导。但是由于对于该业务数据的可靠性没有充分把握，本次项目我选择保留异常值，只是删除明显的错误值。可以进一步仔细分析数据，或者根据业务人员的相关处理原则来进行数据预处理，从而得到更合理的结论。
+- 优化衍生变量的创建模型。创建了两个新变量是为了丰富分析的维度，创建是否合理，是否考虑业务的实际需求，是否引入了不可遇见的错误，这些
 有相关理论支持，都是需要更多探究的。
-- 拟合模型的重新思考。对数据的分析是为了更好的开展交易业务。但是目前由于原始数据集预处理不够，缺乏对实际业务操作的了解，所以预测模型的误差较大。在现有的数据集进一步优化的思路是分块建立拟合模型。
+- 借款金额拟合预测模型的重新思考。对数据的分析是为了更好的开展交易业务。但是目前由于原始数据集预处理不够，缺乏对实际业务操作的了解，所以预测模型的误差较大。在现有的数据集进一步优化的思路是分块建立拟合模型。
