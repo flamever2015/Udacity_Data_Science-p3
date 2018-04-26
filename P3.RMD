@@ -110,7 +110,8 @@ ggplot(aes(x = LC_clean$借款金额), data = LC_clean) +
     xlab("借款金额") +
     ylab("交易数量") + 
     labs(title = "log10处理后的借款金额") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 
 ```
 
@@ -128,25 +129,41 @@ summary(LC$借款金额)
 - 大于50 000的借款很少，在拍拍贷这个P2P平台中，大量交易还属于小额借款。所以重点关注金额在50 000元以下的业务。
 
 ```{r echo=FALSE}
+create_plot <- function(varname, bins = 100) 
+{
+  return(ggplot(aes_string(x = varname), data = LC_clean) +
+  		 geom_histogram(bins = bins) +
+  		 theme(text = element_text(family = "STHeiti")))
+}
 
-p1 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
-    geom_histogram(bins = 100) +
-    xlab("身份认证指数 - 无处理") +
-    theme(text = element_text(family = "STHeiti"))
+p11 <- create_plot('LC_clean$借款金额') + xlab("借款金额 - 无处理")
+p12 <- create_plot('LC_clean$借款金额') + scale_x_log10() + xlab("借款金额 - log10处理")
+p13 <- create_plot('LC_clean$借款金额') + scale_x_sqrt() + xlab("借款金额 - 开平方处理") 
 
-p2 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
-    geom_histogram(bins = 100) +
-    scale_x_log10() +
-    xlab("身份认证指数 - log10处理") +
-    theme(text = element_text(family = "STHeiti"))
+grid.arrange(p11, p12, p13, ncol = 1)
+```
 
-p3 <- ggplot(aes(x = 借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
-    geom_histogram(bins = 100) +
-    scale_x_sqrt() +
-    xlab("身份认证指数 - 开平方处理") +
-    theme(text = element_text(family = "STHeiti"))
 
-grid.arrange(p1, p2, p3, ncol = 1)
+```{r echo=FALSE}
+
+#p1 <- ggplot(aes(x = LC_clean$借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
+#    geom_histogram(bins = 100) +
+#    xlab("借款金额 - 无处理") +
+#    theme(text = element_text(family = "STHeiti"))
+
+#p2 <- ggplot(aes(x = LC_clean$借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
+#    geom_histogram(bins = 100) +
+#    scale_x_log10() +
+#    xlab("借款金额 - log10处理") +
+#    theme(text = element_text(family = "STHeiti"))
+
+#p3 <- ggplot(aes(x = LC_clean$借款金额), data = subset(LC_clean, LC_clean$借款金额 < 50000)) +
+#    geom_histogram(bins = 100) +
+#    scale_x_sqrt() +
+#    xlab("借款金额 - 开平方处理") +
+#    theme(text = element_text(family = "STHeiti"))
+
+#grid.arrange(p1, p2, p3, ncol = 1)
 
 ```
 
@@ -261,15 +278,26 @@ $$ 身份认证指数 = (1.0 * 手机认证指数 + 2.0 * 户口认证指数 + 1
 
 # 创建身份认证指数
 LC_clean$身份认证指数 <- NA
-LC_clean$手机认证指数 <- as.numeric(as.character(ifelse(LC_clean$手机认证 == "成功认证", 1, 0)))
-LC_clean$户口认证指数 <- as.numeric(as.character(ifelse(LC_clean$户口认证 == "成功认证", 1, 0)))
-LC_clean$视频认证指数 <- as.numeric(as.character(ifelse(LC_clean$视频认证 == "成功认证", 1, 0)))
-LC_clean$学历认证指数 <- as.numeric(as.character(ifelse(LC_clean$学历认证 == "成功认证", 1, 0)))
-LC_clean$征信认证指数 <- as.numeric(as.character(ifelse(LC_clean$征信认证 == "成功认证", 1, 0)))
-LC_clean$淘宝认证指数 <- as.numeric(as.character(ifelse(LC_clean$淘宝认证 == "成功认证", 1, 0)))
+LC_clean$手机认证指数 <- as.numeric(as.character(ifelse
+                                           (LC_clean$手机认证 == "成功认证", 1, 0)))
+LC_clean$户口认证指数 <- as.numeric(as.character(ifelse
+                                           (LC_clean$户口认证 == "成功认证", 1, 0)))
+LC_clean$视频认证指数 <- as.numeric(as.character(ifelse
+                                           (LC_clean$视频认证 == "成功认证", 1, 0)))
+LC_clean$学历认证指数 <- as.numeric(as.character(ifelse
+                                           (LC_clean$学历认证 == "成功认证", 1, 0)))
+LC_clean$征信认证指数 <- as.numeric(as.character(ifelse
+                                           (LC_clean$征信认证 == "成功认证", 1, 0)))
+LC_clean$淘宝认证指数 <- as.numeric(as.character(ifelse
+                                           (LC_clean$淘宝认证 == "成功认证", 1, 0)))
 
 # 赋予各种认证方式不同的权重
-LC_clean$身份认证指数 <- (1.0 * LC_clean$手机认证指数 + 2.0 * LC_clean$户口认证指数 + 1.0 * LC_clean$视频认证指数 + 2.0 * LC_clean$学历认证指数 + 3.0 * LC_clean$征信认证指数 + 1.0 * LC_clean$淘宝认证指数)/(1+2+1+2+3+1)
+LC_clean$身份认证指数 <- (1.0 * LC_clean$手机认证指数 + 
+                      2.0 * LC_clean$户口认证指数 + 
+                      1.0 * LC_clean$视频认证指数 + 
+                      2.0 * LC_clean$学历认证指数 + 
+                      3.0 * LC_clean$征信认证指数 + 
+                      1.0 * LC_clean$淘宝认证指数)/(1+2+1+2+3+1)
 
 # 绘制身份认证指数分布柱状图
 ggplot(aes(x = LC_clean$身份认证指数), data = LC_clean) +
@@ -298,7 +326,8 @@ LC_clean$历史成功借款次数 <- as.numeric(as.character(LC_clean$历史成�
 LC_clean$历史成功借款金额 <- as.numeric(as.character(LC_clean$历史成功借款金额))
 
 # 定义历史成功单次借款金额，简写为 hs1LA
-LC_clean$hs1LA <- ifelse(LC_clean$历史成功借款次数 >= 1, LC_clean$历史成功借款金额 / LC_clean$历史成功借款次数, 0)
+LC_clean$hs1LA <- ifelse(LC_clean$历史成功借款次数 >= 1, 
+                         LC_clean$历史成功借款金额 / LC_clean$历史成功借款次数, 0)
 
 # 历史成功单次借款金额的分布情况
 ## 辅助线为50 000
@@ -341,12 +370,13 @@ LC_clean_num <- LC_clean[, c("借款金额", "年龄", "历史成功借款次数
 set.seed(1234)
 ggpairs(LC_clean_num[sample(nrow(LC_clean_num),5000),], 
     lower = list(combo = wrap("facethist", binwidth = 0.5))) +
-    theme(text = element_text(family = "STHeiti", size = 6))
+    theme(text = element_text(family = "STHeiti", size = 6),
+          axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 LC数据集中部分变量的相关性分析矩阵如下，
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.height = 10, fig.width = 10, message=FALSE, warning=FALSE}
 
 # 借款金额和数值型变量的相关性分析
 #LC_clean_num <- LC_clean[, c("借款金额", "年龄", "历史成功借款次数", "历史成功借款金额", "历史正常还款期数", "历史逾期还款期数", "身份认证指数", "hs1LA")]
@@ -358,7 +388,10 @@ LC数据集中部分变量的相关性分析矩阵如下，
 # 绘制相关性矩阵
 ### 【corrplot参考链接】 https://github.com/taiyun/corrplot/issues/36
 ### 【字体设置参考链接】 https://www.zhihu.com/question/21576848
-corrplot(cor(LC_clean_num), method = 'number', number.digits = 1, number.cex = .75, addCoefasPercent = TRUE, family = 'STHeiti') 
+corrplot(cor(LC_clean_num), method = 'number', 
+         number.digits = 1, number.cex = 1, 
+         addCoefasPercent = TRUE, 
+         family = 'STHeiti') 
 
 ```
 
@@ -422,7 +455,7 @@ ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), data = L
 # 散点图
 # 借款金额无处理
 hs1LA1 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_clean) +
-    geom_point(aes(color = I('blue')), alpha = 1/10) +
+    geom_point(alpha = 1/10) +
     xlab("历史成功单次借款金额") +
     ylab("借款金额") +
     labs(title = "借款金额 - 无处理") +
@@ -430,8 +463,8 @@ hs1LA1 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_c
 
 # 借款金额log10
 hs1LA2 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_clean) +
-    geom_point(aes(color = I('blue')), alpha = 1/10) +
-    coord_trans(y = "log10") +
+    geom_point(alpha = 1/10) +
+    scale_y_log10(breaks = c(0, 1000, 3000, 10000, 50000, 100000)) +
     xlab("历史成功单次借款金额") +
     ylab("借款金额") +
     labs(title = "借款金额 - 对数log10处理") +
@@ -439,7 +472,7 @@ hs1LA2 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_c
 
 # 借款金额sqrt
 hs1LA3 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_clean) +
-    geom_point(aes(color = I('blue')), alpha = 1/10) +
+    geom_point(alpha = 1/10) +
     coord_trans(y = "sqrt") +
     xlab("历史成功单次借款金额") +
     ylab("借款金额") +
@@ -521,9 +554,12 @@ by(LC_clean$借款金额, LC_clean$借款类型, summary)
 
 项目数据中提供了多种认证方式，我在之前的文字中提到了身份认证指数，这是一个线性模型的结果值，能够综合各种认证方式的效果。我好奇的是每一位用户在进行了某种方式的认证后，是否会影响到他再进行其他认证？先来看下各种认证方式之间的相关性。
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.height = 10, fig.width = 10, message=FALSE, warning=FALSE}
 LC_clean_Cert <- LC_clean[, c("手机认证指数", "户口认证指数", "视频认证指数", "学历认证指数", "征信认证指数", "淘宝认证指数", "身份认证指数")]
-corrplot(cor(LC_clean_Cert), method = 'number', number.digits = 1, number.cex = .75, addCoefasPercent = TRUE, family = 'STHeiti') 
+corrplot(cor(LC_clean_Cert), method = 'number', 
+         number.digits = 1, number.cex = 1, 
+         addCoefasPercent = TRUE, 
+         family = 'STHeiti') 
 ```
 
 手机认证的比例为
@@ -599,8 +635,9 @@ summary(LC_clean$年龄)
 ##### 1.1 在不同初始评级条件下，借款金额随年龄发生的变化
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("年龄") +
     ylab("借款金额") +
@@ -633,7 +670,8 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
     xlab("年龄") +
     ylab("借款金额的中位数值") +
     labs(title = "不同年龄段的借款金额中位数值变化") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 ```
 
 按照年龄切块分组，获取相应年龄分组内的借款金额中位数值，可发现随着年龄越大，借款金额的中位数值越大。
@@ -641,8 +679,9 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
 ##### 1.2 在不同性别条件下，借款金额随年龄发生的变化
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$性别), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$性别), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="性别") +
     xlab("年龄") +
     ylab("借款金额") +
@@ -652,8 +691,9 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$性�
 按照性别分面绘图如下，
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("年龄") +
     ylab("借款金额") +
@@ -670,8 +710,9 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初�
 ##### 1.3 在不同借款类型条件下，借款金额随年龄发生的变化，
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$借款类型), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$借款类型), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="借款类型") +
     xlab("年龄") +
     ylab("借款金额") +
@@ -681,8 +722,9 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$借�
 按照借款类型分面绘图如下，
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额, color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("年龄") +
     ylab("借款金额") +
@@ -710,8 +752,10 @@ summary(LC_clean$身份认证指数)
 ```
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额, 
+           color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("身份认证指数") +
     ylab("借款金额") +
@@ -720,8 +764,10 @@ ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额, color = L
 ```
 
 ```{r echo=FALSE}
-ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额, 
+           color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("身份认证指数") +
     ylab("借款金额") +
@@ -772,7 +818,8 @@ ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_clean) +
     ylab("借款金额") +
     labs(title = "不同年龄段借款金额的变化") +
     scale_colour_wsj(name = "身份认证分组") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 ```
 
 由此可发现以下有趣的现象，
@@ -791,8 +838,10 @@ summary(LC_clean$hs1LA)
 
 ```{r echo=FALSE}
 # 放大hs1LA范围在100-25 000的区间
-ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, 
+           color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("历史成功单次借款金额") +
     ylab("借款金额") +
@@ -804,24 +853,31 @@ ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初�
 
 ```{r echo=FALSE}
 # 性别分面
-ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, 
+           color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="初始评级") +
     xlab("历史成功单次借款金额") +
     ylab("借款金额") +
     facet_wrap(~性别) +    
-    theme(text = element_text(family = "STHeiti"))
+    theme(text = element_text(family = "STHeiti"),
+          axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 ```{r echo=FALSE}
 # 借款类型分面
-ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, color = LC_clean$初始评级), data = LC_clean) +
-    geom_point() +
+ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额, 
+           color = LC_clean$初始评级), 
+       data = LC_clean) +
+    geom_point(alpha = .45) +
+    #geom_jitter(alpha = 0.9) +
     scale_colour_wsj(name="初始评级") +
     xlab("历史成功单次借款金额") +
     ylab("借款金额") +
     facet_wrap(~借款类型) +    
-    theme(text = element_text(family = "STHeiti"))
+    theme(text = element_text(family = "STHeiti"),
+          axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 由此可发现以下有趣的现象，
@@ -945,7 +1001,8 @@ ggplot(aes(x = LC_clean$借款金额), data = LC_clean) +
     xlab("借款金额(元)") +
     ylab("交易数量") + 
     labs(title = "log10处理后的借款金额") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 ```
 
 ### 描述一
@@ -970,9 +1027,11 @@ s2_1 <- ggplot(aes(x = LC_clean$年龄, y = LC_clean$借款金额), data = LC_cl
     xlab("年龄(岁)") +
     ylab("借款金额(元)") +
     labs(title = "log10借款金额 ~ 年龄") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 
-s2_2 <- ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), data = LC_clean) +
+s2_2 <- ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), 
+               data = LC_clean) +
     geom_point(aes(color = I('blue')), alpha = 1/10) +
     coord_trans(y = "log10") +
     geom_line(stat = 'summary', fun.y = quantile, fun.args=list(probs=0.2),
@@ -984,7 +1043,8 @@ s2_2 <- ggplot(aes(x = LC_clean$身份认证指数, y = LC_clean$借款金额), 
     xlab("身份认证指数") +
     ylab("借款金额(元)") +
     labs(title = "log10借款金额 ~ 身份认证指数") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 
 s2_3 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_clean) +
     geom_point(aes(color = I('blue')), alpha = 1/10) +
@@ -993,27 +1053,32 @@ s2_3 <- ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额), data = LC_cle
     xlab("历史成功单次借款金额(元)") +
     ylab("借款金额(元)") +
     labs(title = "log10借款金额 ~ 历史成功单次借款金额") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 
 grid.arrange(s2_1, s2_2, s2_3, ncol = 1)
 ```
 
 ```{r echo=FALSE}
-s2_4 <- ggplot(aes(x = LC_clean$初始评级, y = LC_clean$借款金额), data = LC_clean) +
+s2_4 <- ggplot(aes(x = LC_clean$初始评级, y = LC_clean$借款金额), 
+               data = LC_clean) +
     geom_boxplot() +
     coord_cartesian(ylim = c(0, 13000)) +
     xlab("初始评级") +  
     ylab("借款金额(元)") +
     labs(title = "借款金额 ~ 初始评级") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 
-s2_5 <- ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款金额), data = LC_clean) +
+s2_5 <- ggplot(aes(x = LC_clean$借款类型, y = LC_clean$借款金额), 
+               data = LC_clean) +
     geom_boxplot() +
     xlab("借款类型") +  
     ylab("借款金额(元)") +
     coord_cartesian(ylim = c(0, 200000)) +
     labs(title = "借款金额 ~ 借款类型") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 
 grid.arrange(s2_4, s2_5, ncol = 1)
 ```
@@ -1032,14 +1097,15 @@ grid.arrange(s2_4, s2_5, ncol = 1)
 ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额,
        color = LC_clean$age_bucket),
        data = LC_clean) +
-    geom_point() +
+    geom_point(alpha = .45) +
     scale_colour_wsj(name="年龄分组") +
     xlab("历史成功单次借款金额(元)") +
     ylab("借款金额(元)") +
     facet_wrap(~LC_clean$CertIndex_bucket_factor) +  
     coord_cartesian(xlim = c(0, 50000),expand = T) +
     labs(title = "借款金额 ~ 历史成功单次借款金额(身份认证分面)") +
-    theme(text = element_text(family = "STHeiti"), plot.title = element_text(hjust = 0.5))
+    theme(text = element_text(family = "STHeiti"), 
+          plot.title = element_text(hjust = 0.5))
 ```
 
 ### 描述三
@@ -1058,8 +1124,8 @@ ggplot(aes(x = LC_clean$hs1LA, y = LC_clean$借款金额,
 
 根据现象分析出的成果对现实交易做出了一些维度的刻画，但仍需要在今后进一步完善以下问题：
 
-- 可视化手段的丰富。在了解实际借贷业务后，根据实际需求来进一步充实数据可视化的表达方式。
-- 异常值的筛选和处理：由于个别异常值（主要是可能的极大值），导致一些趋势性的结论可能会被这些值所错误引导。但是由于对于该业务数据的可靠性没有充分把握，本次项目我选择保留异常值，只是删除明显的错误值。可以进一步仔细分析数据，或者根据业务人员的相关处理原则来进行数据预处理，从而得到更合理的结论。
-- 优化衍生变量的创建模型。创建了两个新变量是为了丰富分析的维度，创建是否合理，是否考虑业务的实际需求，是否引入了不可遇见的错误，这些
+- **可视化手段的丰富。**在了解实际借贷业务后，根据实际需求来进一步充实数据可视化的表达方式。
+- **异常值的筛选和处理。**由于个别异常值（主要是可能的极大值），导致一些趋势性的结论可能会被这些值所错误引导。但是由于对于该业务数据的可靠性没有充分把握，本次项目我选择保留异常值，只是删除明显的错误值。可以进一步仔细分析数据，或者根据业务人员的相关处理原则来进行数据预处理，从而得到更合理的结论。
+- **优化衍生变量的创建模型。**创建了两个新变量是为了丰富分析的维度，创建是否合理，是否考虑业务的实际需求，是否引入了不可遇见的错误，这些
 有相关理论支持，都是需要更多探究的。
-- 借款金额拟合预测模型的重新思考。对数据的分析是为了更好的开展交易业务。但是目前由于原始数据集预处理不够，缺乏对实际业务操作的了解，所以预测模型的误差较大。在现有的数据集进一步优化的思路是分块建立拟合模型。
+- **借款金额拟合预测模型的重新思考。**对数据的分析是为了更好的开展交易业务。但是目前由于原始数据集预处理不够，缺乏对实际业务操作的了解，所以预测模型的误差较大。在现有的数据集进一步优化的思路是分块建立拟合模型。
